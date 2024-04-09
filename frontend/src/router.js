@@ -4,6 +4,8 @@ import UserRegister from './views/Register.vue';
 import UserLogin from './views/Login.vue';
 import AdminLogin from './views/AdminLogin.vue';
 import UserProfile from './views/Profile.vue';
+import AddAlbum from './views/AddAlbum.vue';
+import ShowAlbums from './views/ShowAlbums.vue';
 
 
 const routes = [
@@ -31,6 +33,16 @@ const routes = [
     path: '/profile',
     name: 'Profile',
     component: UserProfile
+  },
+  {
+    path: '/add-album',
+    name: 'AddAlbum',
+    component: AddAlbum
+  },
+  {
+    path: '/albums',
+    name: 'ShowAlbums',
+    component: ShowAlbums
   },
 ];
 

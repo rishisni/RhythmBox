@@ -114,10 +114,15 @@ export default {
           this.errorMessage = '';
         })
         .catch(error => {
-          this.errorMessage = error.response.data.message || 'Login failed';
-          
-          this.successMessage = '';
-        });
+      if (error.response && error.response.data && error.response.data.message) {
+        this.errorMessage = error.response.data.message;
+      } else {
+        
+        this.errorMessage = 'User login failed';
+      }
+      
+      this.successMessage = '';
+    });
     }
   }
 };
