@@ -4,8 +4,12 @@ import UserRegister from './views/Register.vue';
 import UserLogin from './views/Login.vue';
 import AdminLogin from './views/AdminLogin.vue';
 import UserProfile from './views/Profile.vue';
-import AddAlbum from './views/AddAlbum.vue';
-import ShowAlbums from './views/ShowAlbums.vue';
+import AddAlbum from './album/AddAlbum.vue';
+import ShowAlbums from './album/ShowAlbums.vue';
+import AllAlbums from './album/AllAlbums.vue';
+import EditAlbum from './album/EditAlbum.vue';
+import AddSong from './song/AddSong.vue'
+import ShowSong from './song/ShowSong'
 
 
 const routes = [
@@ -44,6 +48,28 @@ const routes = [
     name: 'ShowAlbums',
     component: ShowAlbums
   },
+  {
+    path: '/albums/all',
+    name: 'AllAlbums',
+    component: AllAlbums
+  },
+  {
+    path: '/albums/:id/edit',
+    name: 'EditAlbum',
+    component: EditAlbum
+  },
+  {
+    path: '/albums/:id/add-song',
+    name: 'AddSong',
+    component: AddSong
+  },
+  {
+    path: '/albums/:id/songs',
+    name: 'ShowSong',
+    component: ShowSong
+  },
+  
+  
 ];
 
 const router = createRouter({

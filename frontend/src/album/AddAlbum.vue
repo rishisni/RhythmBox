@@ -55,6 +55,7 @@ export default {
             artist: "",
             coverPhoto: null
           };
+          this.$router.push('/albums');
         })
         .catch((error) => {
           console.error("Error adding album:", error);

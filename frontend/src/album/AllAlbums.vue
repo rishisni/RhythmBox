@@ -1,13 +1,20 @@
 <template>
   <div class="container mt-4">
-    <h1>Albums</h1>
-    <div class="row">
+    <h1>All Albums</h1>
+    <div v-if="albums.length === 0">
+      <p>No albums found.</p>
+    </div>
+    <div v-else class="row">
       <div class="col-md-4" v-for="album in albums" :key="album.id">
         <div class="card mb-4">
-          <img :src=" 'uploads/images/' + album.cover_photo" class="card-img-top" alt="Album Cover">
+          
+          <img :src="'/' + album.cover_photo" class="card-img-top" alt="Album Cover">
+
           <div class="card-body">
             <h5 class="card-title">{{ album.name }}</h5>
             <p class="card-text">Artist: {{ album.artist }}</p>
+            <p class="card-text">Song Count: {{ album.song_count }}</p>
+            <p class="card-text">Created By: {{ album.created_by.username }}</p>
             <router-link :to="'/albums/' + album.id" class="btn btn-primary">View Details</router-link>
           </div>
         </div>
@@ -20,7 +27,7 @@
 import axios from "@/axios-config";
 
 export default {
-  name: "ShowAlbums",
+  name: "AllAlbums",
   data() {
     return {
       albums: []
@@ -32,8 +39,8 @@ export default {
   methods: {
     getAlbums() {
       axios
-        .get("/albums",{
-        headers: {
+        .get("/albums/all", {
+          headers: {
             Authorization: `Bearer ${localStorage.getItem("access_token")}`
           }
         })
@@ -42,13 +49,20 @@ export default {
         })
         .catch((error) => {
           console.error("Error fetching albums:", error);
-          alert("Failed to fetch albums. Please try again.");
+          
         });
+    },
+    getAlbumImageUrl(album) {
+      
+      return `/static/uploads/images/${album.cover_photo}`;
     }
   }
 };
 </script>
 
 <style scoped>
-/* Add custom styles here if needed */
+.album-image {
+  height: 300px; 
+  object-fit: cover; 
+}
 </style>

@@ -52,10 +52,14 @@
           </li>
            <li class="nav-item" v-if=" authenticated &&(userRole === 'is_creator' || userRole === 'is_admin') " >
             <router-link to="/albums" class="nav-link">
-              <i class="fas fa-eye"></i> Show Albums
+              <i class="fas fa-eye"></i> My Albums
             </router-link>
           </li>
-
+          <li class="nav-item" v-if="authenticated">
+            <router-link to="/albums/all" class="nav-link">
+             <i class="fas fa-solid fa-record-vinyl"></i> Albums
+            </router-link>
+          </li>
           <li class="nav-item" v-if="authenticated">
             <router-link to="/songs" class="nav-link">
               <i class="fas fa-music"></i> Songs
