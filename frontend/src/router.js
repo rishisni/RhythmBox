@@ -1,15 +1,19 @@
 import { createRouter, createWebHistory } from 'vue-router';
-import HomePage from './views/Home.vue';
-import UserRegister from './views/Register.vue';
-import UserLogin from './views/Login.vue';
-import AdminLogin from './views/AdminLogin.vue';
-import UserProfile from './views/Profile.vue';
-import AddAlbum from './album/AddAlbum.vue';
-import ShowAlbums from './album/ShowAlbums.vue';
-import AllAlbums from './album/AllAlbums.vue';
-import EditAlbum from './album/EditAlbum.vue';
-import AddSong from './song/AddSong.vue'
-import ShowSong from './song/ShowSong'
+import HomePage from '@/components/Home.vue';
+import UserRegister from '@/views/Register.vue';
+import UserLogin from '@/views/Login.vue';
+import AdminLogin from '@/views/AdminLogin.vue';
+import UserProfile from '@/views/Profile.vue';
+import AddAlbum from '@/album/AddAlbum.vue';
+import ShowAlbums from '@/album/ShowAlbums.vue';
+import AllAlbums from '@/album/AllAlbums.vue';
+import EditAlbum from '@/album/EditAlbum.vue';
+import AddSong from '@/song/AddSong.vue'
+import ShowSong from '@/song/ShowSong.vue'
+import LyricsPage from '@/song/LyricsPage.vue'
+import EditSong from '@/song/EditSong.vue'
+import AllSongs from '@/song/AllSongs.vue';
+import AlbumSong from '@/song/AlbumSong.vue';
 
 
 const routes = [
@@ -59,14 +63,34 @@ const routes = [
     component: EditAlbum
   },
   {
-    path: '/albums/:id/add-song',
+    path: '/albums/:albumId/add-song',
     name: 'AddSong',
     component: AddSong
   },
   {
-    path: '/albums/:id/songs',
+    path: '/albums/:albumId/songs',
     name: 'ShowSong',
     component: ShowSong
+  },
+  {
+    path: '/albums/:albumId/album-songs',
+    name: 'AlbumSong',
+    component: AlbumSong
+  },
+  {
+    path: '/albums/:albumId/songs/:lyrics',
+    name: 'LyricsPage',
+    component: LyricsPage
+  },
+  {
+    path: '/albums/:albumId/songs/:songId/edit',
+    name: 'EditSong',
+    component: EditSong,
+  },
+  {
+    path: '/all-songs',
+    name: 'AllSongs',
+    component: AllSongs,
   },
   
   

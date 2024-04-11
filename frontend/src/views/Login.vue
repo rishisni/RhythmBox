@@ -1,5 +1,5 @@
 <template>
-  <section class="vh-100" style="background-color: #eee">
+  <section class="vh-100" style="background-color: #2d2a2a">
     <div class="container h-100">
       <div class="row d-flex justify-content-center align-items-center h-100">
         <div class="col-lg-12 col-xl-11">
@@ -25,7 +25,11 @@
                   <p class="text-center h1 fw-bold mb-5 mx-1 mx-md-4 mt-4">
                     Login
                   </p>
-                  <form @submit.prevent="loginUser" class="mx-1 mx-md-4" method ="POST">
+                  <form
+                    @submit.prevent="loginUser"
+                    class="mx-1 mx-md-4"
+                    method="POST"
+                  >
                     <div class="form-group d-flex mb-4 align-items-center">
                       <label for="usernameOrEmail" class="mr-3"
                         ><i class="fas fa-user"></i
@@ -84,46 +88,50 @@
 </template>
 
 <script>
-import axios from '@/axios-config'; 
+import axios from "@/axios-config";
 export default {
-    name : "UserLogin",
+  name: "UserLogin",
   data() {
     return {
-      usernameOrEmail: '',
-      password: '',
-      errorMessage: '',
-      successMessage: ''
+      usernameOrEmail: "",
+      password: "",
+      errorMessage: "",
+      successMessage: "",
     };
   },
   methods: {
     loginUser() {
       const userData = {
         usernameOrEmail: this.usernameOrEmail,
-        password: this.password
+        password: this.password,
       };
 
-      axios.post('/login', userData)
-        .then(response => {
-          const { access_token,profile_url } = response.data;
-          
-          localStorage.setItem('access_token', access_token);
-          
-          this.successMessage = 'Login successful';
-          window.location.href = profile_url ;
-          
-          this.errorMessage = '';
+      axios
+        .post("/login", userData)
+        .then((response) => {
+          const { access_token, profile_url } = response.data;
+
+          localStorage.setItem("access_token", access_token);
+
+          this.successMessage = "Login successful";
+          window.location.href = profile_url;
+
+          this.errorMessage = "";
         })
-        .catch(error => {
-      if (error.response && error.response.data && error.response.data.message) {
-        this.errorMessage = error.response.data.message;
-      } else {
-        
-        this.errorMessage = 'User login failed';
-      }
-      
-      this.successMessage = '';
-    });
-    }
-  }
+        .catch((error) => {
+          if (
+            error.response &&
+            error.response.data &&
+            error.response.data.message
+          ) {
+            this.errorMessage = error.response.data.message;
+          } else {
+            this.errorMessage = "User login failed";
+          }
+
+          this.successMessage = "";
+        });
+    },
+  },
 };
 </script>

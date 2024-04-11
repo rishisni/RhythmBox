@@ -1,8 +1,17 @@
 <template>
-  <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+  <nav
+    class="navbar navbar-expand-lg navbar-dark b"
+    style="background-color: #8a2be2"
+  >
     <div class="container">
-      <a class="navbar-brand" href="#">
-        <img src="images/logo1.png" alt="Logo" height="30" />
+      <a class="navbar-brand" href="/">
+        <img
+          src="images/logo1.png"
+          alt="Logo"
+          height="40"
+          width="150"
+          class="navbar-logo"
+        />
       </a>
 
       <button
@@ -45,23 +54,35 @@
               <i class="fas fa-user"></i> Profile
             </router-link>
           </li>
-          <li class="nav-item" v-if=" authenticated &&(userRole === 'is_creator' || userRole === 'is_admin') " >
+          <li
+            class="nav-item"
+            v-if="
+              authenticated &&
+              (userRole === 'is_creator' || userRole === 'is_admin')
+            "
+          >
             <router-link to="/add-album" class="nav-link">
               <i class="fas fa-plus"></i> Add Album
             </router-link>
           </li>
-           <li class="nav-item" v-if=" authenticated &&(userRole === 'is_creator' || userRole === 'is_admin') " >
+          <li
+            class="nav-item"
+            v-if="
+              authenticated &&
+              (userRole === 'is_creator' || userRole === 'is_admin')
+            "
+          >
             <router-link to="/albums" class="nav-link">
               <i class="fas fa-eye"></i> My Albums
             </router-link>
           </li>
           <li class="nav-item" v-if="authenticated">
             <router-link to="/albums/all" class="nav-link">
-             <i class="fas fa-solid fa-record-vinyl"></i> Albums
+              <i class="fas fa-solid fa-record-vinyl"></i> Albums
             </router-link>
           </li>
           <li class="nav-item" v-if="authenticated">
-            <router-link to="/songs" class="nav-link">
+            <router-link to="/all-songs" class="nav-link">
               <i class="fas fa-music"></i> Songs
             </router-link>
           </li>
@@ -72,7 +93,10 @@
           </li>
 
           <li class="nav-item" v-if="authenticated">
-            <button class="btn btn-danger" @click="logout">Logout</button>
+            <button class="nav-link" @click="logout">
+              <i class="fas fa-sign-out-alt"></i>
+              Logout
+            </button>
           </li>
         </ul>
       </div>
@@ -126,7 +150,11 @@ export default {
         })
         .then((response) => {
           // Update the userRole data property based on the response from the backend
-          this.userRole = response.data.is_admin ? 'is_admin' : (response.data.is_creator ? 'is_creator' : 'user');
+          this.userRole = response.data.is_admin
+            ? "is_admin"
+            : response.data.is_creator
+            ? "is_creator"
+            : "user";
           this.authenticated = true; // Set authenticated to true
         })
         .catch((error) => {
@@ -138,6 +166,3 @@ export default {
 };
 </script>
 
-<style scoped>
-/* Add custom styles here if needed */
-</style>

@@ -1,45 +1,80 @@
 <template>
   <div class="container mt-4">
-    <h1>Add Song</h1>
-    <form @submit.prevent="addSong">
-      <div class="mb-3">
-        <label for="name" class="form-label">Song Name</label>
-        <input type="text" class="form-control" id="name" v-model="song.name" required>
+    <div class="container-fluid text-white py-4 d-flex justify-content-center align-items-center" >
+      <div class="col-md-6 col-lg-6 col-xl-5">
+        <div class="container mt-4 border rounded p-4">
+          <h1 class="main-heading">Add Song</h1>
+          <form @submit.prevent="addSong">
+            <div class="mb-3">
+              <label for="name" class="form-label">Song Name</label>
+              <input
+                type="text"
+                class="form-control form-control-plain"
+                id="name"
+                v-model="song.name"
+                required
+              />
+            </div>
+            <div class="mb-3">
+              <label for="lyrics" class="form-label">Lyrics</label>
+              <textarea
+                class="form-control form-control-plain"
+                id="lyrics"
+                v-model="song.lyrics"
+                rows="5"
+                required
+              ></textarea>
+            </div>
+            <div class="mb-3">
+              <label for="genre" class="form-label">Genre</label>
+              <input
+                type="text"
+                class="form-control form-control-plain"
+                id="genre"
+                v-model="song.genre"
+                required
+              />
+            </div>
+            <div class="mb-3">
+              <label for="duration" class="form-label"
+                >Duration (in seconds)</label
+              >
+              <input
+                type="number"
+                class="form-control form-control-plain"
+                id="duration"
+                v-model.number="song.duration"
+                required
+              />
+            </div>
+            <div class="mb-3">
+              <label for="songFile" class="form-label">Song File</label>
+              <input
+                type="file"
+                class="form-control form-control-plain"
+                id="songFile"
+                ref="songFile"
+                @change="onFileChange"
+                required
+              />
+            </div>
+            <div class="d-grid gap-2">
+              <button type="submit" class="btn btn-primary">Add Song</button>
+            </div>
+          </form>
+        </div>
       </div>
-      <div class="mb-3">
-        <label for="lyrics" class="form-label">Lyrics</label>
-        <textarea class="form-control" id="lyrics" v-model="song.lyrics" rows="5" required></textarea>
-      </div>
-      <div class="mb-3">
-        <label for="genre" class="form-label">Genre</label>
-        <input type="text" class="form-control" id="genre" v-model="song.genre" required>
-      </div>
-      <div class="mb-3">
-        <label for="duration" class="form-label">Duration (in seconds)</label>
-        <input type="number" class="form-control" id="duration" v-model.number="song.duration" required>
-      </div>
-      <div class="mb-3">
-        <label for="songFile" class="form-label">Song File</label>
-        <input type="file" class="form-control" id="songFile" ref="songFile" @change="onFileChange" required>
-      </div>
-      <div class="d-grid gap-2">
-        <button type="submit" class="btn btn-primary">Add Song</button>
-      </div>
-    </form>
+    </div>
   </div>
 </template>
+>
 
 <script>
 import axios from "@/axios-config";
 
 export default {
   name: "AddSong",
-  props: {
-    albumId: {
-      type: Number,
-      required: true, // Make albumId prop mandatory
-    },
-  },
+
   data() {
     return {
       song: {
@@ -61,7 +96,7 @@ export default {
       formData.append("song_file", this.song.filePath);
 
       axios
-        .post(`/albums/${this.albumId}/add-song`, formData, {
+        .post(`/albums/${this.$route.params.albumId}/add-song`, formData, {
           headers: {
             "Content-Type": "multipart/form-data",
             Authorization: `Bearer ${localStorage.getItem("access_token")}`,
@@ -70,15 +105,15 @@ export default {
         .then(() => {
           alert("Song added successfully!");
           this.song = {
-            albumId: "", // Reset album ID if needed
+            albumId: "",
             name: "",
             lyrics: "",
             genre: "",
             duration: 0,
             filePath: null,
           };
-          // Redirect to appropriate location (e.g., album details page)
-          this.$router.push(`/albums/${this.albumId}`); // Adjust route if needed
+
+          this.$router.push(`/albums/${this.$route.params.albumId}/songs`);
         })
         .catch((error) => {
           console.error("Error adding song:", error);
@@ -92,6 +127,3 @@ export default {
 };
 </script>
 
-<style scoped>
-/* Add custom styles here if needed */
-</style>

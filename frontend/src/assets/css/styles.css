@@ -1,0 +1,126 @@
+/* -----------------------------NavBar CSS--------------------------------------------------- */
+.navbar {
+    background-color: #8a2be2;
+    margin-bottom: 0;
+
+}
+
+.navbar-toggler {
+    border-color: white;
+}
+
+.navbar-toggler-icon {
+    background-color: white;
+}
+
+.navbar-nav .nav-link {
+    color: white;
+}
+
+.navbar-nav .nav-link:hover {
+    color: black;
+}
+
+
+
+
+.navbar-nav .nav-link {
+    transition: color 0.3s ease;
+
+}
+
+.navbar-toggler-icon {
+    transition: background-color 0.3s ease;
+}
+
+.music-stream-home {
+    background-color: #121212;
+
+    padding: 50px 0;
+    /* Adjust padding as needed */
+}
+
+.image-container {
+    margin-bottom: 20px;
+}
+
+.img-fluid {
+    width: 100%;
+    height: auto;
+    border-radius: 10px;
+    box-shadow: 0px 0px 10px #8a2be2;
+    /* Add a subtle shadow */
+}
+
+.trending {
+    color: #ffffff;
+    box-shadow: 0px 0px 10px #8a2be2;
+
+
+}
+
+.new-song {
+    color: #ffffff;
+    box-shadow: 0px 0px 10px #8a2be2;
+
+}
+
+.heading {
+    margin-top: 0;
+    margin-bottom: 20px;
+}
+
+ul {
+    list-style-type: none;
+    padding-left: 0;
+}
+
+ul li {
+    margin-bottom: 10px;
+}
+
+@media (max-width: 768px) {
+    .music-stream-home {
+        padding: 30px 0;
+        /* Adjust padding for smaller screens */
+    }
+}
+
+
+.album-card {
+    box-shadow: 0px 0px 10px #8a2be2;
+}
+
+
+.album-image {
+    height: 300px;
+    /* Set the height of the image */
+    object-fit: cover;
+    /* Ensure the image covers the entire area */
+}
+
+.main-heading {
+    font-family: 'Roboto', sans-serif;
+    /* Use Google Font Roboto */
+    font-size: 3.5rem;
+    /* Adjust the font size as needed */
+    font-weight: 700;
+    /* Use bold font weight */
+    text-align: center;
+    margin-bottom: 30px;
+    /* Add some space below the heading */
+    text-shadow: 4px 4px 8px #8a2be2;
+    /* Add a subtle shadow */
+    color: #ffffff;
+    /* Set the text color to white */
+    letter-spacing: 2px;
+    /* Add letter spacing for better readability */
+}
+
+
+.form-control-plain {
+    border: none;
+    border-bottom: 1px solid #8a2be2;
+    background-color: transparent;
+    color: white;
+}

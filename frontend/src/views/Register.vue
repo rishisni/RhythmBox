@@ -1,5 +1,5 @@
 <template>
-  <section class="vh-100" style="background-color: #eee">
+  <section class="vh-100" style="background-color: #2d2a2a">
     <div class="container h-100">
       <div class="row d-flex justify-content-center align-items-center h-100">
         <div class="col-lg-12 col-xl-11">
@@ -72,7 +72,7 @@
                         id="isCreator"
                         v-model="isCreator"
                         class="form-check-input"
-                        :value="true" 
+                        :value="true"
                       />
                       <label for="isCreator" class="form-check-label"
                         >Register as Creator</label
@@ -111,52 +111,48 @@
   </section>
 </template>
 <script>
-import axios from '@/axios-config'; 
+import axios from "@/axios-config";
 
 export default {
-    name : "UserRegister",
+  name: "UserRegister",
   data() {
     return {
-      username: '',
-      email: '',
-      password: '',
+      username: "",
+      email: "",
+      password: "",
       isCreator: false,
-      successMessage: '',
+      successMessage: "",
     };
   },
   methods: {
     registerUser() {
-  const userData = {
-    username: this.username,
-    email: this.email,
-    password: this.password,
-    is_creator: this.isCreator, 
-  };
+      const userData = {
+        username: this.username,
+        email: this.email,
+        password: this.password,
+        is_creator: this.isCreator,
+      };
 
-  axios.post('/register', userData)
-    .then(response => {
-      
-      this.successMessage = response.data.message;
-      
-    })
-    .catch(error => {
-      
-      if (error.response) {
-        
-        console.error('Server Error:', error.response.data);
-        this.successMessage = 'Registration failed: ' + error.response.data.message;
-      } else if (error.request) {
-        
-        console.error('No Response:', error.request);
-        this.successMessage = 'Registration failed: No response from the server';
-      } else {
-        
-        console.error('Request Error:', error.message);
-        this.successMessage = 'Registration failed: Request error';
-      }
-    });
-},
-
+      axios
+        .post("/register", userData)
+        .then((response) => {
+          this.successMessage = response.data.message;
+        })
+        .catch((error) => {
+          if (error.response) {
+            console.error("Server Error:", error.response.data);
+            this.successMessage =
+              "Registration failed: " + error.response.data.message;
+          } else if (error.request) {
+            console.error("No Response:", error.request);
+            this.successMessage =
+              "Registration failed: No response from the server";
+          } else {
+            console.error("Request Error:", error.message);
+            this.successMessage = "Registration failed: Request error";
+          }
+        });
+    },
   },
 };
 </script>

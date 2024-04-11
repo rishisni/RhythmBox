@@ -1,21 +1,25 @@
 <template>
-  <div class="container mt-4">
-    <h1>Add Album</h1>
-    <form @submit.prevent="addAlbum">
-      <div class="mb-3">
-        <label for="name" class="form-label">Album Name</label>
-        <input type="text" class="form-control" id="name" v-model="album.name" required>
+  <div class="container-fluid  text-white py-4 d-flex justify-content-center align-items-center">
+    <div class="col-md-6 col-lg-6 col-xl-5">
+      <div class="container mt-4 border rounded p-4">
+        <h1 class="main-heading text-center">Add Album</h1>
+        <form @submit.prevent="addAlbum">
+          <div class="mb-3">
+            <label for="name" class="form-label">Album Name</label>
+            <input type="text" class="form-control form-control-plain" id="name" v-model="album.name" required>
+          </div>
+          <div class="mb-3">
+            <label for="artist" class="form-label">Artist</label>
+            <input type="text" class="form-control form-control-plain" id="artist" v-model="album.artist" required>
+          </div>
+          <div class="mb-3">
+            <label for="coverPhoto" class="form-label">Cover Photo</label>
+            <input type="file" class="form-control form-control-plain" id="coverPhoto" @change="onFileChange" required>
+          </div>
+          <button type="submit" class="btn btn-primary d-block mx-auto">Add Album</button>
+        </form>
       </div>
-      <div class="mb-3">
-        <label for="artist" class="form-label">Artist</label>
-        <input type="text" class="form-control" id="artist" v-model="album.artist" required>
-      </div>
-      <div class="mb-3">
-        <label for="coverPhoto" class="form-label">Cover Photo</label>
-        <input type="file" class="form-control" id="coverPhoto" @change="onFileChange" required>
-      </div>
-      <button type="submit" class="btn btn-primary">Add Album</button>
-    </form>
+    </div>
   </div>
 </template>
 
@@ -29,7 +33,7 @@ export default {
       album: {
         name: "",
         artist: "",
-        coverPhoto: null
+        photo: null // Update the key name to match the backend
       }
     };
   },
@@ -38,7 +42,7 @@ export default {
       let formData = new FormData();
       formData.append("name", this.album.name);
       formData.append("artist", this.album.artist);
-      formData.append("cover_photo", this.album.coverPhoto);
+      formData.append("photo", this.album.photo); // Update the key name to match the backend
 
       axios
         .post("/add-album", formData, {
@@ -49,11 +53,10 @@ export default {
         })
         .then(() => {
           alert("Album added successfully");
-          
           this.album = {
             name: "",
             artist: "",
-            coverPhoto: null
+            photo: null // Update the key name to match the backend
           };
           this.$router.push('/albums');
         })
@@ -63,12 +66,15 @@ export default {
         });
     },
     onFileChange(event) {
-      this.album.coverPhoto = event.target.files[0];
+      this.album.photo = event.target.files[0]; // Update the key name to match the backend
     }
   }
 };
 </script>
 
 <style scoped>
-/* Add custom styles here if needed */
+
+
+
+
 </style>

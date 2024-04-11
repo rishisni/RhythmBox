@@ -1,75 +1,121 @@
 <template>
   <div class="container mt-4">
-    <h1>Song Details</h1>
-    <div v-if="song">
-      <div class="row mb-3">
-        <label for="name" class="col-sm-2 col-form-label">Name</label>
-        <div class="col-sm-10">{{ song.name }}</div>
-      </div>
-      <div class="row mb-3">
-        <label for="lyrics" class="col-sm-2 col-form-label">Lyrics</label>
-        <div class="col-sm-10" v-html="song.lyrics"></div>
-      </div>
-      <div class="row mb-3">
-        <label for="genre" class="col-sm-2 col-form-label">Genre</label>
-        <div class="col-sm-10">{{ song.genre }}</div>
-      </div>
-      <div class="row mb-3">
-        <label for="duration" class="col-sm-2 col-form-label">Duration</label>
-        <div class="col-sm-10">{{ formatDuration(song.duration) }}</div>
-      </div>
-      <div class="row mb-3">
-        <label for="dateCreated" class="col-sm-2 col-form-label">Date Added</label>
-        <div class="col-sm-10">{{ song.date_created.toLocaleDateString() }}</div>
-      </div>
-      <div v-if="song.filePath">
-        <audio :src="song.filePath" controls></audio>
-      </div>
-    </div>
+    <h1 class="main-heading">Songs</h1>
+
+    <div v-if="songs.length === 0" class="text-center">No songs found.</div>
     <div v-else>
-      <p>Loading song details...</p>
+      <div v-for="song in songs" :key="song.id" class="card mb-3">
+        <div class="card-body">
+          <h5 class="card-title">{{ song.name }}</h5>
+          <p class="card-text">Genre: {{ song.genre }}</p>
+          <strong>Duration:</strong> {{ formatDuration(song.duration) }}
+          <p class="card-text">Added by: {{ song.added_by.username }}</p>
+          <strong>Added</strong> {{ formatDatetime(song.date_created) }}
+          <audio controls :src="getAudioSource(song)" type="audio/mpeg"></audio>
+
+          <button @click="showLyrics(song)" class="btn btn-primary mt-2">
+            Show Lyrics
+          </button>
+
+          <router-link
+            :to="'/albums/' + albumId + '/songs/' + song.id + '/edit'"
+            >Edit Song</router-link
+          >
+
+          <button @click="deleteSong(song.id)" class="btn btn-danger mt-2">
+            Delete
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 </template>
 
 <script>
 import axios from "@/axios-config";
+
 export default {
   name: "ShowSong",
-  props: {
-    albumId: {
-      type: Number,
-      required: true,
-    },
-    songId: {
-      type: Number,
-      required: true,
-    },
-  },
   data() {
     return {
-      song: null,
+      albumId: null,
+      albumName: "",
+      songs: [],
+      loading: true,
     };
   },
-  created() {
-    this.fetchSong();
+  mounted() {
+    this.albumId = this.$route.params.albumId;
+    this.fetchAlbumSongs();
   },
   methods: {
-    fetchSong() {
+    fetchAlbumSongs() {
       axios
-        .get(`/albums/${this.albumId}/songs/${this.songId}`)
-        .then((response) => (this.song = response.data))
-        .catch((error) => console.error("Error fetching song:", error));
+        .get(`/albums/${this.albumId}/songs`, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+          },
+        })
+        .then((response) => {
+          this.albumName = response.data.album_name;
+          this.songs = response.data.songs;
+          this.loading = false;
+        })
+        .catch((error) => {
+          console.error("Error fetching album songs:", error);
+          this.loading = false;
+        });
     },
-    formatDuration(duration) {
-      const minutes = Math.floor(duration / 60);
-      const seconds = duration % 60;
-      return `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
+    showLyrics(song) {
+      this.$router.push({
+        name: "LyricsPage",
+        params: { lyrics: song.lyrics },
+      });
+    },
+    getAudioSource(song) {
+      if (song.audio_data) {
+        return `data:audio/mpeg;base64,${song.audio_data}`;
+      } else {
+        return "";
+      }
+    },
+    deleteSong(songId) {
+      if (confirm("Are you sure you want to delete this song?")) {
+        axios
+          .delete(`/albums/${this.albumId}/songs/${songId}`, {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+            },
+          })
+          .then(() => {
+            this.fetchAlbumSongs();
+          })
+          .catch((error) => {
+            console.error("Error deleting song:", error);
+          });
+      }
+    },
+    formatDuration(seconds) {
+      const minutes = Math.floor(seconds / 60);
+      const remainingSeconds = seconds % 60;
+      return `${minutes} min ${remainingSeconds} sec`;
+    },
+    formatDatetime(dateCreated) {
+      const now = new Date();
+      const added = new Date(dateCreated);
+      const diffMs = now - added;
+      const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+      const diffMinutes = Math.floor(diffMs / (1000 * 60));
+
+      if (diffMinutes < 60) {
+        return `${diffMinutes} minutes ago`;
+      } else if (diffHours < 24) {
+        return `${diffHours} hours ago`;
+      } else {
+        const options = { year: "numeric", month: "short", day: "numeric" };
+        return added.toLocaleDateString(undefined, options);
+      }
     },
   },
 };
 </script>
-
-<style scoped>
-/* Add custom styles here if needed */
-</style>

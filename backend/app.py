@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify,send_from_directory
 from werkzeug.security import generate_password_hash
 from models import *
 from flask_migrate import Migrate
@@ -7,7 +7,10 @@ from flask_jwt_extended import JWTManager, create_access_token, jwt_required, ge
 from werkzeug.security import check_password_hash
 from sqlalchemy import or_
 import os
+import uuid
 from datetime import timedelta
+import base64
+from sqlalchemy.orm import joinedload
 
 app = Flask(__name__)
 CORS(app, supports_credentials=True)
@@ -17,6 +20,7 @@ app.config['JWT_SECRET_KEY'] = 'your_secret_key_here'
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(days=1)
 db.init_app(app)
 jwt = JWTManager(app)
+
 
 migrate = Migrate(app, db)
 
@@ -28,48 +32,28 @@ app.config["JWT_BLACKLIST_TOKEN_CHECKS"] = ["access", "refresh"]
 blacklisted_tokens = set()
 
 
-# Configuration For Image Uplaoding
-UPLOAD_FOLDER = 'static/uploads/images'
 
-ALLOWED_IMAGE_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
-
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-
-
-def allowed_file(filename):
-    return '.' in filename and \
-           filename.rsplit('.', 1)[1].lower() in ALLOWED_IMAGE_EXTENSIONS
-
-
-# Configuration For Music Files
-UPLOAD_SONG_FOLDER = 'static/uploads/songs'
-
-app.config['UPLOAD_SONG_FOLDER'] = UPLOAD_SONG_FOLDER
-
-ALLOWED_MUSIC_EXTENSIONS = {'mp3', 'wav', 'ogg'}
-
-
-def allowed_music_file(filename):
-    return '.' in filename and \
-           filename.rsplit('.', 1)[1].lower() in ALLOWED_MUSIC_EXTENSIONS
-
-
-def generate_unique_filename(filename):
-    current_datetime = datetime.now().strftime("%Y%m%d%H%M%S")
-    filename_without_extension, extension = os.path.splitext(filename)
-    return f"{filename_without_extension}.{current_datetime}{extension}"
 
 
 # ------------------------------------Routes---------------------------------------------------------------------------
 
 
-# Route for Getting User Id
-@app.route('/protected', methods=['GET'])
-@jwt_required()
-def protected():
 
-    current_user_id = get_jwt_identity()
-    return jsonify(logged_in_as=current_user_id), 200
+# Route to fetch top 3 recently added songs
+
+@app.route('/songs/top', methods=['GET'])
+def get_top_songs():
+    top_songs = Song.query.options(joinedload(Song.album)).order_by(Song.date_created.desc()).limit(3).all()
+    if top_songs:
+        serialized_top_songs = [{
+            'id': song.id,
+            'name': song.name,
+            'albumId': song.album.id,
+            'albumName': song.album.name if song.album else 'Unknown Album'
+        } for song in top_songs]
+        return jsonify({'top_songs': serialized_top_songs}), 200
+    else:
+        return jsonify({'message': 'No songs found'}), 404
 
 
 # Route For User and Creator Registration
@@ -170,7 +154,7 @@ def check_if_token_in_blocklist(jwt_header, decoded_token):
     return jti in blacklisted_tokens
 
 
-# Route For Adding New Album with File Upload
+#Route to Add Song
 @app.route('/add-album', methods=['POST'])
 @jwt_required()
 def add_album():
@@ -180,33 +164,30 @@ def add_album():
         data = request.form
         name = data.get('name')
         artist = data.get('artist')
+        
+        if 'photo' not in request.files:
+            return jsonify({'message': 'No photo uploaded'}), 400
 
-        # Check if the request contains a file
-        if 'cover_photo' not in request.files:
-            return jsonify({'message': 'No file part'}), 400
+        photo = request.files['photo']
+        
+        if photo.filename == '':
+            return jsonify({'message': 'No selected photo'}), 400
 
-        file = request.files['cover_photo']
+        _, ext = os.path.splitext(photo.filename)
+        unique_filename = str(uuid.uuid4()) + ext
 
-        # Check if the file is allowed
-        if file.filename == '':
-            return jsonify({'message': 'No selected file'}), 400
-        if file and allowed_file(file.filename):
-            filename = generate_unique_filename(file.filename)
-            file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-            file.save(file_path)
+        photo_data = photo.read()
 
-            # Create the new album with the file path
-            new_album = Album(name=name, artist=artist,
-                              cover_photo=file_path, user=user)
-            db.session.add(new_album)
-            db.session.commit()
+        new_album = Album(name=name, artist=artist, user=user, photo_data=photo_data, photo_filename=unique_filename)
+        db.session.add(new_album)
+        db.session.commit()
 
-            return jsonify({'message': 'Album added successfully'}), 201
-        else:
-            return jsonify({'message': 'File type not allowed'}), 400
+        return jsonify({'message': 'Album added successfully'}), 201
+        
     else:
         return jsonify({'message': 'Unauthorized to add albums'}), 403
 
+    
 
 # Route For Fetching Albums Created by the Current User
 @app.route('/albums', methods=['GET'])
@@ -225,15 +206,14 @@ def get_albums():
                 'id': album.id,
                 'name': album.name,
                 'artist': album.artist,
-                'cover_photo': f"/{app.config['UPLOAD_FOLDER']}/{album.cover_photo}",
-                'song_count': album.song_count
+                'song_count': album.song_count,
+                'photo_data': base64.b64encode(album.photo_data).decode(),  
             } for album in albums]
             return jsonify(serialized_albums), 200
         else:
             return jsonify({'message': 'No albums found for the current user'}), 404
     else:
         return jsonify({'message': 'Unauthorized to access albums'}), 403
-
 
 # Route For Fetching All Albums
 @app.route('/albums/all', methods=['GET'])
@@ -245,8 +225,8 @@ def get_all_albums():
             'id': album.id,
             'name': album.name,
             'artist': album.artist,
-            'cover_photo': f"/{album.cover_photo}",
             'song_count': album.song_count,
+            'photo_data': base64.b64encode(album.photo_data).decode(), 
             'created_by': {
                 'id': album.user.id,
                 'username': album.user.username
@@ -307,8 +287,71 @@ def delete_album(album_id):
 
 
 # Route to Add Song
-@app.route('/albums/<int:album_id>/add-song', methods=['OPTIONS', 'POST'])
-@jwt_required()
+# @app.route('/albums/<int:album_id>/add-song', methods=['POST'])
+# @jwt_required() 
+# def add_song(album_id):
+#     current_user_id = get_jwt_identity()
+#     user = User.query.get(current_user_id)
+#     album = Album.query.get(album_id)
+
+#     if user and album:
+#         data = request.form
+#         name = data.get('name')
+#         lyrics = data.get('lyrics')
+#         genre = data.get('genre')
+#         duration = data.get('duration')
+
+#         if 'song_file' not in request.files:
+#             return jsonify({'message': 'No file part'}), 400
+
+#         file = request.files['song_file']
+
+#         if file.filename == '':
+#             return jsonify({'message': 'No selected file'}), 400
+#         if file and allowed_music_file(file.filename):
+#             filename = generate_unique_filename(file.filename)
+#             file_path = os.path.join(app.config['UPLOAD_SONG_FOLDER'], filename)
+#             file.save(file_path)
+
+#             new_song = Song(name=name, lyrics=lyrics, genre=genre,
+#                             duration=duration, file_path=file_path, album=album,user_id = user.id)
+#             db.session.add(new_song)
+#             album.song_count += 1
+#             db.session.commit()
+
+#             return jsonify({'message': 'Song added successfully'}), 201
+#         else:
+#             return jsonify({'message': 'File type not allowed'}), 400
+#     else:
+#         return jsonify({'message': 'Unauthorized or Album not found'}), 403
+
+
+# Route to get Songs of Albums
+# Route to get Songs of Albums
+# @app.route('/albums/<int:album_id>/songs', methods=['GET'])
+# @jwt_required() 
+# def get_album_songs(album_id):
+#     current_user_id = get_jwt_identity()
+#     user = User.query.get(current_user_id)
+#     album = Album.query.get(album_id)
+#     if album:
+#         songs = Song.query.filter_by(album_id=album_id).all()
+#         serialized_songs = [{
+#             'id': song.id,
+#             'name': song.name,
+#             'lyrics': song.lyrics,
+#             'genre': song.genre,
+#             'album_name': song.album.name,
+#             'duration': song.duration,
+#             'date_created': song.date_created,
+#             'file_path': f"/uploads/songs/{song.file_path}",
+#             'added_by': song.user_id  # Changed to user ID instead of username
+#         } for song in songs]
+#         return jsonify({'songs': serialized_songs, 'current_user_id': current_user_id}), 200
+#     else:
+#         return jsonify({'message': 'Album not found'}), 404
+@app.route('/albums/<int:album_id>/add-song', methods=['POST'])
+@jwt_required() 
 def add_song(album_id):
     current_user_id = get_jwt_identity()
     user = User.query.get(current_user_id)
@@ -320,35 +363,23 @@ def add_song(album_id):
         lyrics = data.get('lyrics')
         genre = data.get('genre')
         duration = data.get('duration')
+        song_data = request.files['song_file'].read()  
+        new_song = Song(name=name, lyrics=lyrics, genre=genre,
+                        duration=duration, audio_data=song_data, album=album, user_id=user.id)
+        db.session.add(new_song)
+        album.song_count += 1
+        db.session.commit()
 
-        if 'song_file' not in request.files:
-            return jsonify({'message': 'No file part'}), 400
-
-        file = request.files['song_file']
-
-        if file.filename == '':
-            return jsonify({'message': 'No selected file'}), 400
-        if file and allowed_file(file.filename):
-            filename = generate_unique_filename(file.filename)
-            file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-            file.save(file_path)
-
-            new_song = Song(name=name, lyrics=lyrics, genre=genre,
-                            duration=duration, file_path=file_path, album=album, user=user)
-            db.session.add(new_song)
-            album.song_count += 1
-            db.session.commit()
-
-            return jsonify({'message': 'Song added successfully'}), 201
-        else:
-            return jsonify({'message': 'File type not allowed'}), 400
+        return jsonify({'message': 'Song added successfully'}), 201
     else:
         return jsonify({'message': 'Unauthorized or Album not found'}), 403
 
 
-# Route to get Songs of Albums
 @app.route('/albums/<int:album_id>/songs', methods=['GET'])
+@jwt_required() 
 def get_album_songs(album_id):
+    current_user_id = get_jwt_identity()
+    user = User.query.get(current_user_id)
     album = Album.query.get(album_id)
     if album:
         songs = Song.query.filter_by(album_id=album_id).all()
@@ -357,15 +388,96 @@ def get_album_songs(album_id):
             'name': song.name,
             'lyrics': song.lyrics,
             'genre': song.genre,
+            'albumName': song.album.name,
             'duration': song.duration,
             'date_created': song.date_created,
-            'file_path': song.file_path,
-            'added_by': song.user.username
+            'audio_data': base64.b64encode(song.audio_data).decode('utf-8') if song.audio_data else None,
+            'added_by': { 'id' :song.user_id, 'username' :song.user.username}
         } for song in songs]
-        return jsonify(serialized_songs), 200
+        return jsonify({'songs': serialized_songs, 'current_user_id': current_user_id}), 200
     else:
         return jsonify({'message': 'Album not found'}), 404
 
+
+@app.route('/albums/<int:album_id>/songs/<int:song_id>', methods=['PUT'])
+@jwt_required()
+def edit_song(album_id, song_id):
+    current_user_id = get_jwt_identity()
+    user = User.query.get(current_user_id)
+    album = Album.query.get(album_id)
+    song = Song.query.get(song_id)
+
+    if not album or not song:
+        return jsonify({'message': 'Album or song not found'}), 404
+
+    if current_user_id != song.user_id:  
+        return jsonify({'message': 'Unauthorized to edit this song'}), 403
+
+    data = request.json
+    name = data.get('name')
+    lyrics = data.get('lyrics')
+    genre = data.get('genre')
+    duration = data.get('duration')
+
+    song.name = name
+    song.lyrics = lyrics
+    song.genre = genre
+    song.duration = duration
+
+    db.session.commit()
+
+    return jsonify({'message': 'Song updated successfully'}), 200
+
+
+# Route for Deleting Song
+@app.route('/albums/<int:album_id>/songs/<int:song_id>', methods=['DELETE'])
+@jwt_required()
+def delete_song(album_id, song_id):
+    current_user_id = get_jwt_identity()
+    user = User.query.get(current_user_id)
+    album = Album.query.get(album_id)
+    song = Song.query.get(song_id)
+
+    if not album or not song:
+        return jsonify({'message': 'Album or song not found'}), 404
+
+    if current_user_id != song.user_id: 
+        return jsonify({'message': 'Unauthorized to delete this song'}), 403
+
+    if os.path.exists(song.file_path):
+        os.remove(song.file_path)
+
+    db.session.delete(song)
+    album.song_count -= 1
+    db.session.commit()
+
+    return jsonify({'message': 'Song deleted successfully'}), 200
+
+
+@app.route('/songs/all', methods=['GET'])
+@jwt_required() 
+def get_all_songs():
+    current_user_id = get_jwt_identity()
+    user = User.query.get(current_user_id)
+    
+    if not user:
+        return jsonify({'message': 'User not found'}), 404
+
+    songs = Song.query.order_by(Song.date_created.desc()).all()
+    
+    serialized_songs = [{
+        'id': song.id,
+        'name': song.name,
+        'lyrics': song.lyrics,
+        'artist_name': song.album.artist,  
+        'duration': song.duration,
+        'albumId': song.album.id,
+        'date_created' : song.date_created,
+        'audio_data': base64.b64encode(song.audio_data).decode('utf-8') if song.audio_data else None,
+        'album_name': song.album.name if song.album else 'Unknown Album',  
+    } for song in songs]
+    
+    return jsonify({'songs': serialized_songs}), 200
 
 
 # Route For Logout
@@ -377,6 +489,14 @@ def logout():
     return jsonify({"message": "Successfully logged out"}), 200
 
 
+
+# Route for Getting User Id
+@app.route('/protected', methods=['GET'])
+@jwt_required()
+def protected():
+
+    current_user_id = get_jwt_identity()
+    return jsonify(logged_in_as=current_user_id), 200
 
 if __name__ == '__main__':
     app.run(debug=True)
