@@ -26,10 +26,10 @@ See [Configuration Reference](https://cli.vuejs.org/config/).
 
 # backend
 
-# create virtual environement
+# create virtual environment
 python3 -m venv env
 
-# activate vy using this command
+# activate by using this command
 source env/bin/activate
 
 # Install dependencies:
@@ -37,3 +37,11 @@ pip install -r requirements.txt
 
 # run 
 python3 app.py
+
+
+# To run redis server
+redis-server
+
+# To run clery jobs 
+celery -A app:celery worker --loglevel=info
+celery -A app:celery beat --loglevel=info
