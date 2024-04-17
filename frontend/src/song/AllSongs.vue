@@ -1,29 +1,71 @@
 <template>
   <div class="container mt-4">
     <h1 class="main-heading">All Songs</h1>
-    <div v-if="loading" class="text-center">Loading...</div>
+    <div v-if="loading" class="text-center text-white">Loading...</div>
     <div v-else>
-      <div v-if="songs.length === 0" class="text-center">No songs found.</div>
+      <div v-if="songs.length === 0" class="text-center text-white">No songs found.</div>
       <div v-else>
-        <div v-for="song in songs" :key="song.id" class="card mb-3">
-          <div class="card-body">
-            <p class="card-text">
-              <strong>Album:</strong> {{ song.album_name }} &nbsp;|&nbsp;
-              <strong>Song:</strong> {{ song.name }} &nbsp;|&nbsp;
-              <strong>Artist:</strong> {{ song.artist_name }} &nbsp;|&nbsp;
-              <strong>Duration:</strong> {{ formatDuration(song.duration) }}
-              <strong>Added</strong> {{ formatDatetime(song.date_created) }}
-            </p>
-            <div class="audio-player">
-              <audio
-                controls
-                :src="getAudioSource(song)"
-                type="audio/mpeg"
-              ></audio>
+        <div class="row">
+          <div
+            v-for="song in songs"
+            :key="song.id"
+            class="col-md-6 col-lg-4 mb-4"
+          >
+            <div class="card bg-dark text-white p-4 album-card">
+              <div class="card-body">
+                <p
+                  class="card-text d-flex justify-content-between align-items-center"
+                >
+                  <strong>Album:</strong> {{ song.album_name }}
+                  <strong>Song:</strong> {{ song.name }}
+                </p>
+                <p
+                  class="card-text d-flex justify-content-between align-items-center"
+                >
+                  <strong>Artist:</strong> {{ song.artist_name }}
+                  <strong>Duration:</strong> {{ formatDuration(song.duration) }}
+                </p>
+                <div class="audio-player">
+                  <audio
+                    controls
+                    :src="getAudioSource(song)"
+                    type="audio/mpeg"
+                  ></audio>
+                </div>
+                <div class="d-flex justify-content-between align-items-center">
+                  <button
+                    @click="showLyrics(song)"
+                    class="btn btn-outline-light mt-2" style="background-color: #8a2be2;"
+                  >
+                    <i class="fas fa-file-audio"></i>
+                  </button>
+                 <button
+                    class="btn btn-outline-light mt-2" style="background-color: #8a2be2;"
+                    @click="toggleLike(song.id)"
+                  >
+                    <i
+                      :class="{
+                        'fas fa-heart': song.liked,
+                        'far fa-heart': !song.liked,
+                      }"
+                    ></i>
+                  </button>
+
+                  <button
+                    class="btn btn-outline-light mt-2" style="background-color: #8a2be2;"
+                    @click="reportSong(song.id)"
+                  >
+                    <!-- Report button -->
+                    <i class="fas fa-flag"></i>
+                  </button>
+                </div>
+                <br />
+                <div class="d-flex justify-content-between align-items-center">
+                  <p>Added: {{ formatDatetime(song.date_created) }}</p>
+                  <p>Likes: {{ song.like_count }}</p>
+                </div>
+              </div>
             </div>
-            <button @click="showLyrics(song)" class="btn btn-primary mt-2">
-              Show Lyrics
-            </button>
           </div>
         </div>
       </div>
@@ -79,7 +121,7 @@ export default {
     formatDuration(seconds) {
       const minutes = Math.floor(seconds / 60);
       const remainingSeconds = seconds % 60;
-      return `${minutes} min ${remainingSeconds} sec`;
+      return `${minutes} m ${remainingSeconds} s`;
     },
     formatDatetime(dateCreated) {
       const now = new Date();
@@ -89,13 +131,55 @@ export default {
       const diffMinutes = Math.floor(diffMs / (1000 * 60));
 
       if (diffMinutes < 60) {
-        return `${diffMinutes} minutes ago`;
+        return `${diffMinutes} min ago`;
       } else if (diffHours < 24) {
-        return `${diffHours} hours ago`;
+        return `${diffHours} hrs ago`;
       } else {
         const options = { year: "numeric", month: "short", day: "numeric" };
         return added.toLocaleDateString(undefined, options);
       }
+    },
+    toggleLike(songId) {
+      axios
+        .post(
+          `/songs/${songId}/like`,
+          {},
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+            },
+          }
+        )
+        .then((response) => {
+          const updatedSong = this.songs.find((song) => song.id === songId);
+          updatedSong.like_count = response.data.like_count;
+          updatedSong.liked = !updatedSong.liked;
+          alert("Song liked successfully!");
+        })
+        .catch((error) => {
+          console.error("Error toggling like status:", error);
+          alert("Failed to like the song. Please try again.");
+        });
+    },
+
+    reportSong(songId) {
+      axios
+        .post(
+          `/songs/${songId}/report`,
+          {},
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+            },
+          }
+        )
+        .then(() => {
+         alert("Song reported successfully!");
+        })
+        .catch((error) => {
+          console.error("Error reporting song:", error);
+          alert("Failed to report the song. Please try again.");
+        });
     },
   },
 };

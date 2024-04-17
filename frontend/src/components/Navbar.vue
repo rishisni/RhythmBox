@@ -6,14 +6,19 @@
     <div class="container">
       <a class="navbar-brand" href="/">
         <img
-          src="images/logo1.png"
+          src="logo1.png"
           alt="Logo"
           height="40"
           width="150"
           class="navbar-logo"
         />
       </a>
-
+     <form class="d-flex ms-auto" @submit.prevent="search">
+          <input class="form-control me-2" type="search" placeholder="Search" aria-label="Search" v-model="searchQuery">
+          <button class="btn btn-outline-light" type="submit">
+            <i class="fas fa-search"></i>
+          </button>
+        </form>
       <button
         class="navbar-toggler"
         type="button"
@@ -87,8 +92,13 @@
             </router-link>
           </li>
           <li class="nav-item" v-if="authenticated && userRole !== 'is_admin'">
-            <router-link to="/my-playlist" class="nav-link">
+            <router-link to="/create-playlist" class="nav-link">
               <i class="fas fa-list"></i> My Playlist
+            </router-link>
+          </li>
+          <li class="nav-item" v-if="authenticated && userRole === 'is_admin'">
+            <router-link to="/admin-summary" class="nav-link">
+              <i class="fas fa-chart-line"></i> Stats
             </router-link>
           </li>
 
@@ -113,6 +123,7 @@ export default {
     return {
       authenticated: false, // Set to true when user is authenticated
       userRole: "", // Set user role here (user, creator, admin)
+      searchQuery: "",
     };
   },
   mounted() {
@@ -161,6 +172,14 @@ export default {
           console.error("Error fetching user role:", error);
           // Handle error fetching user role, if needed
         });
+    },
+     search() {
+      if (this.searchQuery.trim() !== "") {
+        this.$router.push({ name: "SearchResults", query: { q: this.searchQuery } });
+        setTimeout(() => {
+            window.location.reload(); // Refresh the page after a delay
+          }, 10);
+      }
     },
   },
 };

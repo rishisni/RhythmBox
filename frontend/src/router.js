@@ -4,6 +4,7 @@ import UserRegister from '@/views/Register.vue';
 import UserLogin from '@/views/Login.vue';
 import AdminLogin from '@/views/AdminLogin.vue';
 import UserProfile from '@/views/Profile.vue';
+import AdminSummary from '@/views/AdminSummary.vue'
 import AddAlbum from '@/album/AddAlbum.vue';
 import ShowAlbums from '@/album/ShowAlbums.vue';
 import AllAlbums from '@/album/AllAlbums.vue';
@@ -14,6 +15,9 @@ import LyricsPage from '@/song/LyricsPage.vue'
 import EditSong from '@/song/EditSong.vue'
 import AllSongs from '@/song/AllSongs.vue';
 import AlbumSong from '@/song/AlbumSong.vue';
+import CreatePlaylist from '@/playlist/CreatePlaylist.vue'
+import PlaylistDetail from '@/playlist/PlaylistDetail.vue'
+import SearchResults from '@/views/SearchResults.vue';
 
 
 const routes = [
@@ -91,6 +95,26 @@ const routes = [
     path: '/all-songs',
     name: 'AllSongs',
     component: AllSongs,
+  },
+  {
+    path: '/create-playlist',
+    name: 'CreatePlaylist',
+    component: CreatePlaylist,
+  },
+  {
+    path: '/playlists/:id',
+    name: 'PlaylistDetail',
+    component: PlaylistDetail,
+  },
+  {
+    path: '/admin-summary',
+    name: 'AdminSummary',
+    component: AdminSummary,
+  },
+  {
+    path: '/search',
+    name: 'SearchResults',
+    component: SearchResults,
   },
   
   

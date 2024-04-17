@@ -1,9 +1,9 @@
 <template>
-  <section class="vh-100" style="background-color: #2d2a2a">
+  <section class="vh-100" >
     <div class="container h-100">
       <div class="row d-flex justify-content-center align-items-center h-100">
         <div class="col-lg-12 col-xl-11">
-          <div class="card text-black" style="border-radius: 25px">
+          <div class="card text-white bg-dark album-card" style="border-radius: 25px">
             <div class="card-body p-md-5">
               <div class="row justify-content-center">
                 <div class="col-md-10 col-lg-6 col-xl-5 order-2 order-lg-1">
@@ -38,7 +38,7 @@
                         type="text"
                         id="usernameOrEmail"
                         v-model="usernameOrEmail"
-                        class="form-control"
+                        class="form-control form-control-plain"
                         placeholder="Username or Email"
                         required
                       />
@@ -51,12 +51,12 @@
                         type="password"
                         id="password"
                         v-model="password"
-                        class="form-control"
+                        class="form-control form-control-plain"
                         placeholder="Password"
                         required
                       />
                     </div>
-                    <button type="submit" class="btn btn-primary btn-lg">
+                    <button type="submit" class="btn btn btn-outline-light d-block mx-auto custom-btn btn-lg">
                       Login
                     </button>
                   </form>

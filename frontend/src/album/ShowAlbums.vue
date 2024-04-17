@@ -1,5 +1,5 @@
 <template>
-  <div class="container mt-4 text-light">
+  <div v-if="userRole.is_admin || userRole.is_creator" class="container mt-4 text-light">
     <h1 class="main-heading">Albums</h1>
     <div class="row">
       <div class="col-md-4 mt-2" v-for="album in albums" :key="album.id">
@@ -29,8 +29,10 @@
       </div>
     </div>
   </div>
+  <div v-else>
+    <p class="text-white text-center mt-4">You are not authorized to access this page.</p>
+  </div>
 </template>
-
 
 <script>
 import axios from "@/axios-config";
@@ -40,12 +42,31 @@ export default {
   data() {
     return {
       albums: [],
+      userRole: {
+        is_admin: false,
+        is_creator: false
+      }
     };
   },
   mounted() {
+    this.getUserRole();
     this.getAlbums();
   },
   methods: {
+    getUserRole() {
+      axios
+        .get("/user-role", {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+          },
+        })
+        .then((response) => {
+          this.userRole = response.data;
+        })
+        .catch((error) => {
+          console.error("Error fetching user role:", error);
+        });
+    },
     getAlbums() {
       axios
         .get("/albums", {

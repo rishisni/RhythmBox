@@ -2,7 +2,7 @@
   <div class="music-stream-home">
     <div class="container mt-4">
       <div class="row mb-4 text-white">
-        <div class="col-md-12 ">
+        <div class="col-md-12">
           <h2>Welcome to our Music Streaming Platform!</h2>
           <p>
             Discover the latest hits, explore your favorite genres, and enjoy an
@@ -35,16 +35,16 @@
           <h2>Recently Added Songs</h2>
           <ul>
             <li v-for="song in topSongs" :key="song.id">
-              <strong> {{ song.name }} </strong>
+              <strong>{{ song.name }}</strong>
             </li>
           </ul>
         </div>
         <div class="col-md-4 new-song">
-          <h2 class="heading">New Songs</h2>
+          <h2>Most Liked Songs</h2>
           <ul>
-            <li>New Song 1</li>
-            <li>New Song 2</li>
-            <li>New Song 3</li>
+            <li v-for="song in topLikedSongs" :key="song.id">
+              <strong>{{ song.name }}</strong>
+            </li>
           </ul>
         </div>
       </div>
@@ -60,10 +60,12 @@ export default {
   data() {
     return {
       topSongs: [],
+      topLikedSongs: [],
     };
   },
   mounted() {
     this.fetchTopSongs();
+    this.fetchTopLikedSongs();
   },
   methods: {
     fetchTopSongs() {
@@ -76,8 +78,34 @@ export default {
           console.error("Error fetching top songs:", error);
         });
     },
+    fetchTopLikedSongs() {
+      axios
+        .get("/songs/top-liked")
+        .then((response) => {
+          this.topLikedSongs = response.data.top_liked_songs;
+        })
+        .catch((error) => {
+          console.error("Error fetching top liked songs:", error);
+        });
+    },
   },
 };
 </script>
 
+<style scoped>
+.image-container {
+  margin-bottom: 20px;
+}
 
+.trending,
+.new-song {
+  /* background-color: #f8f9fa; */
+  padding: 20px;
+}
+
+.trending h2,
+.new-song h2 {
+  margin-bottom: 15px;
+  font-size: 24px;
+}
+</style>

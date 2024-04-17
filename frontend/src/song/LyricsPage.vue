@@ -1,17 +1,21 @@
 <template>
   <div class="container mt-4">
-    <div class="logo">
-      <img src="/images/logo1.png" alt="Logo" class="logo-image" />
-    </div>
+    <div class="row justify-content-center">
+      <div class="col-md-6">
+        <div class="text-center mb-4">
+          <img src="/images/logo1.png" alt="Logo" class="logo-image" />
+        </div>
 
-    <div class="lyrics mt-4 text-center">
-      <pre>{{ lyrics }}</pre>
-    </div>
+        <div class="lyrics mt-4">
+          <pre class="p-3 bg-dark text-white text-align-center">{{ lyrics }}</pre>
+        </div>
 
-    <div class="text-center mt-3">
-      <button @click="downloadLyrics" class="btn btn-primary">
-        Download Lyrics
-      </button>
+        <div class="text-center mt-3">
+          <button @click="downloadLyrics" class="btn btn btn-outline-light d-block mx-auto custom-btn">
+            Download Lyrics
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -41,37 +45,16 @@ export default {
 </script>
 
 <style scoped>
-.logo {
-  position: absolute;
-
-  left: 20px;
-}
-
 .logo-image {
   width: 100px;
 }
 
-
 .lyrics {
-  background-color: #f9f9f9;
-  padding: 20px;
-  border-radius: 5px;
+  /* background-color: ; */
   border: 1px solid #8a2be2;
+  border-radius: 5px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 
-.btn-primary {
-  background-color: #007bff;
-  color: #fff;
-  border: none;
-  border-radius: 3px;
-  padding: 8px 16px;
-  cursor: pointer;
-  transition: background-color 0.3s ease;
-}
-
-.btn-primary:hover {
-  background-color: #0056b3;
-}
 </style>

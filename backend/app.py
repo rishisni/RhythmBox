@@ -5,20 +5,36 @@ from flask_migrate import Migrate
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity, get_jwt
 from werkzeug.security import check_password_hash
-from sqlalchemy import or_
+from sqlalchemy import or_,func,desc
 import os
 import uuid
 from datetime import timedelta
 import base64
 from sqlalchemy.orm import joinedload
+from flask_redis import FlaskRedis
+from celery import Celery
+from config import Config
+from tasks import celery
 
 app = Flask(__name__)
 CORS(app, supports_credentials=True)
+app.config.from_object(Config)
+
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['JWT_SECRET_KEY'] = 'your_secret_key_here'
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(days=1)
+# app.config['REDIS_URL'] = 'redis://localhost:6379/0'
+# app.config['CELERY_BROKER_URL'] = 'redis://localhost:6379/0'
+app.config['CACHE_TYPE'] = 'redis'
+app.config['CACHE_REDIS_URL'] = 'redis://localhost:6379/0'
+
 db.init_app(app)
+redis_store = FlaskRedis(app)
+# celery = Celery(app.name, broker=app.config['CELERY_BROKER_URL'])
+# celery.conf.update(app.config)
+
+
 jwt = JWTManager(app)
 
 
@@ -39,6 +55,8 @@ blacklisted_tokens = set()
 
 
 
+
+
 # Route to fetch top 3 recently added songs
 
 @app.route('/songs/top', methods=['GET'])
@@ -55,6 +73,25 @@ def get_top_songs():
     else:
         return jsonify({'message': 'No songs found'}), 404
 
+@app.route('/songs/top-liked', methods=['GET'])
+def get_top_liked_songs():
+    top_liked_songs = Song.query \
+        .join(Like, Song.id == Like.song_id) \
+        .group_by(Song.id) \
+        .order_by(desc(func.count(Like.id))) \
+        .limit(3) \
+        .all()
+
+    if top_liked_songs:
+        serialized_top_liked_songs = [{
+            'id': song.id,
+            'name': song.name,
+            'albumId': song.album.id,
+            'albumName': song.album.name if song.album else 'Unknown Album'
+        } for song in top_liked_songs]
+        return jsonify({'top_liked_songs': serialized_top_liked_songs}), 200
+    else:
+        return jsonify({'message': 'No songs found'}), 404
 
 # Route For User and Creator Registration
 @app.route('/register', methods=['POST'])
@@ -92,6 +129,9 @@ def login():
         if user.is_admin:
             return jsonify({'message': 'Admin login should be done through a separate form'}), 401
         if check_password_hash(user.password, password):
+            # Update the last_visit field when the user logs in
+            user.update_last_visit()
+            db.session.commit()  # Commit the changes to the database
             access_token = create_access_token(identity=user.id)
             return jsonify({'access_token': access_token, 'profile_url': '/profile'}), 200
         else:
@@ -217,6 +257,7 @@ def get_albums():
 
 # Route For Fetching All Albums
 @app.route('/albums/all', methods=['GET'])
+@jwt_required()
 def get_all_albums():
     albums = Album.query.order_by(Album.id.desc()).all()
     if albums:
@@ -238,7 +279,7 @@ def get_all_albums():
 
 
 # Route to Edit Album
-@app.route('/albums/<int:album_id>', methods=['PUT'])
+@app.route('/albums/<int:album_id>', methods=['PUT','GET'])
 @jwt_required()
 def edit_album(album_id):
     current_user_id = get_jwt_identity()
@@ -277,8 +318,7 @@ def delete_album(album_id):
     if user.id != album.user_id:
         return jsonify({'message': 'Unauthorized to delete this album'}), 403
 
-    if os.path.exists(album.cover_photo):
-        os.remove(album.cover_photo)
+    
 
     db.session.delete(album)
     db.session.commit()
@@ -286,70 +326,7 @@ def delete_album(album_id):
     return jsonify({'message': 'Album deleted successfully'}), 200
 
 
-# Route to Add Song
-# @app.route('/albums/<int:album_id>/add-song', methods=['POST'])
-# @jwt_required() 
-# def add_song(album_id):
-#     current_user_id = get_jwt_identity()
-#     user = User.query.get(current_user_id)
-#     album = Album.query.get(album_id)
 
-#     if user and album:
-#         data = request.form
-#         name = data.get('name')
-#         lyrics = data.get('lyrics')
-#         genre = data.get('genre')
-#         duration = data.get('duration')
-
-#         if 'song_file' not in request.files:
-#             return jsonify({'message': 'No file part'}), 400
-
-#         file = request.files['song_file']
-
-#         if file.filename == '':
-#             return jsonify({'message': 'No selected file'}), 400
-#         if file and allowed_music_file(file.filename):
-#             filename = generate_unique_filename(file.filename)
-#             file_path = os.path.join(app.config['UPLOAD_SONG_FOLDER'], filename)
-#             file.save(file_path)
-
-#             new_song = Song(name=name, lyrics=lyrics, genre=genre,
-#                             duration=duration, file_path=file_path, album=album,user_id = user.id)
-#             db.session.add(new_song)
-#             album.song_count += 1
-#             db.session.commit()
-
-#             return jsonify({'message': 'Song added successfully'}), 201
-#         else:
-#             return jsonify({'message': 'File type not allowed'}), 400
-#     else:
-#         return jsonify({'message': 'Unauthorized or Album not found'}), 403
-
-
-# Route to get Songs of Albums
-# Route to get Songs of Albums
-# @app.route('/albums/<int:album_id>/songs', methods=['GET'])
-# @jwt_required() 
-# def get_album_songs(album_id):
-#     current_user_id = get_jwt_identity()
-#     user = User.query.get(current_user_id)
-#     album = Album.query.get(album_id)
-#     if album:
-#         songs = Song.query.filter_by(album_id=album_id).all()
-#         serialized_songs = [{
-#             'id': song.id,
-#             'name': song.name,
-#             'lyrics': song.lyrics,
-#             'genre': song.genre,
-#             'album_name': song.album.name,
-#             'duration': song.duration,
-#             'date_created': song.date_created,
-#             'file_path': f"/uploads/songs/{song.file_path}",
-#             'added_by': song.user_id  # Changed to user ID instead of username
-#         } for song in songs]
-#         return jsonify({'songs': serialized_songs, 'current_user_id': current_user_id}), 200
-#     else:
-#         return jsonify({'message': 'Album not found'}), 404
 @app.route('/albums/<int:album_id>/add-song', methods=['POST'])
 @jwt_required() 
 def add_song(album_id):
@@ -391,6 +368,7 @@ def get_album_songs(album_id):
             'albumName': song.album.name,
             'duration': song.duration,
             'date_created': song.date_created,
+            'like_count' : get_like_count(song.id)   ,
             'audio_data': base64.b64encode(song.audio_data).decode('utf-8') if song.audio_data else None,
             'added_by': { 'id' :song.user_id, 'username' :song.user.username}
         } for song in songs]
@@ -444,8 +422,7 @@ def delete_song(album_id, song_id):
     if current_user_id != song.user_id: 
         return jsonify({'message': 'Unauthorized to delete this song'}), 403
 
-    if os.path.exists(song.file_path):
-        os.remove(song.file_path)
+    
 
     db.session.delete(song)
     album.song_count -= 1
@@ -473,7 +450,8 @@ def get_all_songs():
         'duration': song.duration,
         'albumId': song.album.id,
         'date_created' : song.date_created,
-        'audio_data': base64.b64encode(song.audio_data).decode('utf-8') if song.audio_data else None,
+        'like_count' : get_like_count(song.id)   ,
+        'audio_data': base64.b64encode(song.audio_data).decode() if song.audio_data else None,
         'album_name': song.album.name if song.album else 'Unknown Album',  
     } for song in songs]
     
@@ -484,10 +462,16 @@ def get_all_songs():
 @app.route("/logout", methods=["POST"])
 @jwt_required()
 def logout():
-    jti = get_jwt()["jti"]
-    blacklisted_tokens.add(jti)
-    return jsonify({"message": "Successfully logged out"}), 200
-
+    current_user_id = get_jwt_identity()
+    user = User.query.get(current_user_id)
+    if user:
+        jti = get_jwt()["jti"]
+        blacklisted_tokens.add(jti)
+        user.update_last_visit()
+        db.session.commit()
+        return jsonify({"message": "Successfully logged out"}), 200
+    else:
+        return jsonify({"message": "User not found"}), 404
 
 
 # Route for Getting User Id
@@ -497,6 +481,308 @@ def protected():
 
     current_user_id = get_jwt_identity()
     return jsonify(logged_in_as=current_user_id), 200
+
+
+@app.route('/create-playlist', methods=['POST'])
+@jwt_required()
+def create_playlist():
+    current_user_id = get_jwt_identity()
+    user = User.query.get(current_user_id)
+    if not user:
+        return jsonify({'message': 'User not found'}), 404
+
+    data = request.json
+    name = data.get('name')
+
+    playlist = Playlist(name=name, user_id=current_user_id)
+    db.session.add(playlist)
+    db.session.commit()
+
+    return jsonify({'message': 'Playlist created successfully'}), 201
+
+# Route for adding a song to a playlist
+@app.route('/playlists/<int:playlist_id>/add-song', methods=['POST'])
+@jwt_required()
+def add_song_to_playlist(playlist_id):
+    current_user_id = get_jwt_identity()
+    user = User.query.get(current_user_id)
+    if not user:
+        return jsonify({'message': 'User not found'}), 404
+
+    playlist = Playlist.query.get(playlist_id)
+    if not playlist:
+        return jsonify({'message': 'Playlist not found'}), 404
+
+    data = request.json
+    song_id = data.get('song_id')
+
+    song = Song.query.get(song_id)
+    if not song:
+        return jsonify({'message': 'Song not found'}), 404
+
+    if song not in playlist.songs:
+        playlist.songs.append(song)
+        db.session.commit()
+        return jsonify({'message': 'Song added to playlist successfully'}), 200
+    else:
+        return jsonify({'message': 'Song already exists in the playlist'}), 400
+
+
+@app.route('/playlists', methods=['GET'])
+@jwt_required() 
+def get_user_playlists():
+    current_user_id = get_jwt_identity()
+    user = User.query.get(current_user_id)
+    if not user:
+        return jsonify({'message': 'User not found'}), 404
+
+    playlists = Playlist.query.filter_by(user_id=current_user_id).all()
+
+    serialized_playlists = [{
+        'id': playlist.id,
+        'name': playlist.name,
+    } for playlist in playlists]
+
+    return jsonify({'playlists': serialized_playlists}), 200
+
+
+@app.route('/playlists/<int:playlist_id>', methods=['GET'])
+@jwt_required()
+def get_playlist(playlist_id):
+    current_user_id = get_jwt_identity()
+    user = User.query.get(current_user_id)
+    if not user:
+        return jsonify({'message': 'User not found'}), 404
+
+    playlist = Playlist.query.filter_by(id=playlist_id, user_id=current_user_id).first()
+    if not playlist:
+        return jsonify({'message': 'Playlist not found'}), 404
+
+    serialized_playlist = {
+        'id': playlist.id,
+        'name': playlist.name,
+        'songs': [{
+            'id': song.id,
+            'name': song.name,
+            'artist': song.album.artist,
+            'duration': song.duration,
+            'audio_data': base64.b64encode(song.audio_data).decode() if song.audio_data else None,
+            # Add more song details as needed
+        } for song in playlist.songs]
+    }
+
+    return jsonify({'playlist': serialized_playlist}), 200
+
+@app.route('/playlists/<int:playlist_id>/songs/<int:song_id>', methods=['DELETE'])
+@jwt_required()
+def remove_song_from_playlist(playlist_id, song_id):
+    current_user_id = get_jwt_identity()
+    user = User.query.get(current_user_id)
+    if not user:
+        return jsonify({'message': 'User not found'}), 404
+
+    playlist = Playlist.query.get(playlist_id)
+    if not playlist:
+        return jsonify({'message': 'Playlist not found'}), 404
+
+    song = Song.query.get(song_id)
+    if not song:
+        return jsonify({'message': 'Song not found'}), 404
+
+    if song in playlist.songs:
+        playlist.songs.remove(song)
+        db.session.commit()
+        return jsonify({'message': 'Song removed from playlist successfully'}), 200
+    else:
+        return jsonify({'message': 'Song is not in the playlist'}), 400
+
+@app.route('/playlists/<int:playlist_id>', methods=['DELETE'])
+@jwt_required()
+def delete_playlist(playlist_id):
+    current_user_id = get_jwt_identity()
+    user = User.query.get(current_user_id)
+    if not user:
+        return jsonify({'message': 'User not found'}), 404
+
+    playlist = Playlist.query.filter_by(id=playlist_id, user_id=current_user_id).first()
+    if not playlist:
+        return jsonify({'message': 'Playlist not found'}), 404
+
+    db.session.delete(playlist)
+    db.session.commit()
+
+    return jsonify({'message': 'Playlist deleted successfully'}), 200
+
+
+@app.route('/songs/<int:song_id>/like', methods=['POST'])
+@jwt_required()
+def like_song(song_id):
+    current_user_id = get_jwt_identity()
+    like = Like.query.filter_by(user_id=current_user_id, song_id=song_id).first()
+    if like:
+        like.liked = True
+    else:
+        like = Like(user_id=current_user_id, song_id=song_id)
+        db.session.add(like)
+    db.session.commit()
+    return jsonify({'message': 'Song liked successfully'}), 200
+
+@app.route('/songs/<int:song_id>/unlike', methods=['POST'])
+@jwt_required()
+def unlike_song(song_id):
+    current_user_id = get_jwt_identity()
+    like = Like.query.filter_by(user_id=current_user_id, song_id=song_id).first()
+    if like:
+        like.liked = False
+        db.session.commit()
+        return jsonify({'message': 'Song unliked successfully'}), 200
+    else:
+        return jsonify({'message': 'Song not liked by the user'}), 404
+
+def get_like_count(song_id):
+    return Like.query.filter_by(song_id=song_id, liked=True).count()
+
+
+
+@app.route('/songs/<int:song_id>/report', methods=['POST'])
+@jwt_required()
+def report_song(song_id):
+    current_user_id = get_jwt_identity()
+    report = Report.query.filter_by(user_id=current_user_id, song_id=song_id).first()
+    if report:
+        return jsonify({'message': 'Song already reported by the user'}), 400
+    else:
+        report = Report(user_id=current_user_id, song_id=song_id)
+        db.session.add(report)
+        
+        # Increment the report count for the song
+        song = Song.query.get(song_id)
+        if song:
+            if song.report_count is None:
+                song.report_count = 0
+            song.report_count += 1
+        
+        db.session.commit()
+        return jsonify({'message': 'Song reported successfully'}), 201
+
+def admin_summary():
+    current_user_id = get_jwt_identity()
+    user = User.query.get(current_user_id)
+    if not user or not user.is_admin:
+        return jsonify({'message': 'Unauthorized access'}), 403
+
+    # Total number of users
+    total_users = User.query.count()
+
+    # Number of users who are creators
+    total_creators = User.query.filter_by(is_creator=True).count()
+
+    # Total number of albums
+    total_albums = Album.query.count()
+
+    # Total number of songs
+    total_songs = Song.query.count()
+
+    # Total number of likes
+    total_likes = Like.query.filter_by(liked=True).count()
+
+    # Total number of reports
+    total_reports = Report.query.count()
+
+    # Song-wise like count
+    song_like_counts = {}
+    songs = Song.query.all()
+    for song in songs:
+        like_count = get_like_count(song.id)
+        song_like_counts[song.name] = like_count
+
+    # Song-wise report count
+    song_report_counts = {}
+    for song in songs:
+        report_count = song.report_count if song.report_count else 0
+        song_report_counts[song.name] = report_count
+
+    summary = {
+        "total_users": total_users,
+        "total_creators": total_creators,
+        "total_albums": total_albums,
+        "total_songs": total_songs,
+        "total_likes": total_likes,
+        "total_reports": total_reports,
+        "song_like_counts": song_like_counts,
+        "song_report_counts": song_report_counts
+    }
+
+    return summary
+
+# Usage
+@app.route('/admin-summary', methods=['GET'])
+@jwt_required()
+def get_admin_summary():
+    summary = admin_summary()
+    return jsonify(summary)
+
+def serialize_album(album):
+    return {
+        'id': album.id,
+        'title': album.name,
+        'artist': album.artist,
+        # 'genre': album.genre,
+        # Add more fields to serialize as needed
+    }
+def serialize_song(song):
+    # Check if the song has an associated album
+    album_name = song.album.name if song.album else 'Unknown Album'
+    
+    # Check if the song has audio data
+    audio_data_encoded = base64.b64encode(song.audio_data).decode() if song.audio_data else None
+    
+    return {
+        'id': song.id,
+        'name': song.name,
+        'lyrics': song.lyrics,
+        'artist_name': song.album.artist if song.album else None,
+        'duration': song.duration,
+        'albumId': song.album.id if song.album else None,
+        'date_created': song.date_created,
+        'like_count': get_like_count(song.id),  # Assuming get_like_count is a defined function
+        'audio_data': audio_data_encoded,
+        'album_name': album_name,
+    }
+
+
+@app.route('/search', methods=['GET'])
+@jwt_required()
+def search():
+    search_query = request.args.get('query')
+
+    if not search_query:
+        return jsonify({'message': 'No search query provided'}), 400
+
+    # Perform database queries to find matching songs and albums
+    song_results = Song.query.filter(
+        or_(
+            Song.name.ilike(f'%{search_query}%'),
+            
+            Song.genre.ilike(f'%{search_query}%'),
+            Song.lyrics.ilike(f'%{search_query}%'),
+            # Add more fields to search as needed
+        )
+    ).all()
+
+    album_results = Album.query.filter(
+        or_(
+            Album.name.ilike(f'%{search_query}%'),
+            Album.artist.ilike(f'%{search_query}%'),
+            # Album.genre.ilike(f'%{search_query}%'),
+            # Add more fields to search as needed
+        )
+    ).all()
+
+    serialized_songs = [serialize_song(song) for song in song_results]
+    serialized_albums = [serialize_album(album) for album in album_results]
+
+    return jsonify({'songs': serialized_songs, 'albums': serialized_albums}), 200
 
 if __name__ == '__main__':
     app.run(debug=True)
